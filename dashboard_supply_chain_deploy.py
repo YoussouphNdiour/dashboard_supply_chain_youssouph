@@ -59,7 +59,7 @@ df["optimal_stock_levels"] = optimal_stock_levels
 
 
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
-
+server = app.server
 
 SIDEBAR_STYLE = {
     "position": "fixed",

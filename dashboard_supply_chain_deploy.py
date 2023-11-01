@@ -9,6 +9,7 @@ import pandas as pd
 import plotly.subplots as sp
 import plotly.graph_objs as go
 import plotly.express as px
+
 # Chargez vos données depuis un DataFrame pandas
 df = pd.read_csv('./supply_chain_data.csv')
 # Calculer les coûts totaux de la chaîne d'approvisionnement
@@ -87,6 +88,7 @@ sidebar = html.Div(
         ),
         dbc.Nav(
             [
+                dbc.NavLink("Accueil", href="/", active="exact"),
                 dbc.NavLink("Optimisation de la chaîne d'approvisionnement", href="/optimisation", active="exact"),
                 dbc.NavLink("Prévision de la demande et gestion des stocks", href="/demande", active="exact"),
                 dbc.NavLink("Évaluation des performances des fournisseurs", href="/fournisseurs", active="exact"),
@@ -120,11 +122,107 @@ def render_page_content(pathname):
 
         # Créer un graphique en barres du temps de cycle de production
         fig_production_cycle_time = px.bar(data_frame=df, x=df.index, y=production_cycle_time, title='Temps de cycle de production')
+        # Créer un tableau de bord pour montrer les performances de la production sur une variété d'indicateurs
+        fig_performance = sp.make_subplots(rows=2, cols=2,
+                            subplot_titles=["Volumes de production", "Délai de fabrication", "Coûts de fabrication", "Taux de défauts"])
 
+        # Ajouter une visualisation pour chaque indicateur de performance
+        fig_performance.add_trace(
+            go.Bar(
+                x=df["Product type"],
+                y=df["Production volumes"],
+                name="Volumes de production",
+            ),
+            row=1, col=1,
+        )
+
+        fig_performance.add_trace(
+            go.Bar(
+                x=df["Product type"],
+                y=df["Manufacturing lead time"],
+                name="Délai de fabrication",
+            ),
+            row=1, col=2,
+        )
+
+        fig_performance.add_trace(
+            go.Bar(
+                x=df["Product type"],
+                y=df["Manufacturing costs"],
+                name="Coûts de fabrication",
+            ),
+            row=2, col=1,
+        )
+
+        fig_performance.add_trace(
+            go.Bar(
+                x=df["Product type"],
+                y=df["Defect rates"],
+                name="Taux de défauts",
+            ),
+            row=2, col=2,
+        )
+
+        fig_performance.update_layout(
+            template="plotly",
+            title_text="Tableau de bord de performances de production",
+        )
+        # Créer un diagramme de Pareto pour identifier les processus qui ont les performances les plus faibles
+        df["Process"] = df["Routes"] + df["Product type"]
+        pareto_df = df.groupby("Process").agg(defect_rate=("Defect rates", "mean"))
+        pareto_df = pareto_df.sort_values(by=["defect_rate"], ascending=True)
+
+        fig_pareto = go.Figure()
+
+        fig_pareto.add_trace(
+            go.Bar(
+                x=pareto_df.index,
+                y=pareto_df["defect_rate"],
+                name="Taux de défauts",
+            )
+        )
+
+        fig_pareto.add_trace(
+            go.Scatter(
+                x=pareto_df.index,
+                y=pareto_df["defect_rate"].cumsum(),
+                name="% cumulatif",
+            )
+        )
+
+        fig_pareto.update_layout(
+            title="Diagramme de Pareto",
+            xaxis_title="Processus",
+            yaxis_title="Taux de défauts",
+            yaxis2=dict(
+                title="% cumulatif",
+                overlaying='y',
+                side='right',
+                range=[0, 100]
+            ),
+        )
         return dbc.Row(
             [ 
+                html.Div(
+                    [
+                        html.H1("Tableau de bord de Performance", className="text-danger"),
+                        html.Hr(),
+                        html.P("Indicateurs de performances"),
+                    ],
+                    className="p-3 bg-light rounded-3",
+                ),
+                dcc.Graph(figure=fig_performance),
                 dcc.Graph(figure=fig_machine_utilization_rate),
                 dcc.Graph(figure=fig_production_cycle_time),
+                dcc.Graph(figure=fig_pareto),
+                html.Div(
+                    [
+                        html.H1("Résultats/Recommandations", className="text-danger"),
+                        html.Hr(),
+                        html.P("--"),
+                    ],
+                    className="p-3 bg-light rounded-3",
+                ),
             ]
             )
     elif pathname == "/optimisation":

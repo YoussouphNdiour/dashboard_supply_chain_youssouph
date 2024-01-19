@@ -9,7 +9,6 @@ import pandas as pd
 import plotly.subplots as sp
 import plotly.graph_objs as go
 import plotly.express as px
-
 # Chargez vos données depuis un DataFrame pandas
 df = pd.read_csv('./supply_chain_data.csv')
 # Calculer les coûts totaux de la chaîne d'approvisionnement
@@ -60,7 +59,7 @@ df["optimal_stock_levels"] = optimal_stock_levels
 
 
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
-server = app.server
+
 
 SIDEBAR_STYLE = {
     "position": "fixed",
@@ -88,7 +87,6 @@ sidebar = html.Div(
         ),
         dbc.Nav(
             [
-                dbc.NavLink("Accueil", href="/", active="exact"),
                 dbc.NavLink("Optimisation de la chaîne d'approvisionnement", href="/optimisation", active="exact"),
                 dbc.NavLink("Prévision de la demande et gestion des stocks", href="/demande", active="exact"),
                 dbc.NavLink("Évaluation des performances des fournisseurs", href="/fournisseurs", active="exact"),
@@ -122,107 +120,11 @@ def render_page_content(pathname):
 
         # Créer un graphique en barres du temps de cycle de production
         fig_production_cycle_time = px.bar(data_frame=df, x=df.index, y=production_cycle_time, title='Temps de cycle de production')
-        # Créer un tableau de bord pour montrer les performances de la production sur une variété d'indicateurs
-        fig_performance = sp.make_subplots(rows=2, cols=2,
-                            subplot_titles=["Volumes de production", "Délai de fabrication", "Coûts de fabrication", "Taux de défauts"])
 
-        # Ajouter une visualisation pour chaque indicateur de performance
-        fig_performance.add_trace(
-            go.Bar(
-                x=df["Product type"],
-                y=df["Production volumes"],
-                name="Volumes de production",
-            ),
-            row=1, col=1,
-        )
-
-        fig_performance.add_trace(
-            go.Bar(
-                x=df["Product type"],
-                y=df["Manufacturing lead time"],
-                name="Délai de fabrication",
-            ),
-            row=1, col=2,
-        )
-
-        fig_performance.add_trace(
-            go.Bar(
-                x=df["Product type"],
-                y=df["Manufacturing costs"],
-                name="Coûts de fabrication",
-            ),
-            row=2, col=1,
-        )
-
-        fig_performance.add_trace(
-            go.Bar(
-                x=df["Product type"],
-                y=df["Defect rates"],
-                name="Taux de défauts",
-            ),
-            row=2, col=2,
-        )
-
-        fig_performance.update_layout(
-            template="plotly",
-            title_text="Tableau de bord de performances de production",
-        )
-        # Créer un diagramme de Pareto pour identifier les processus qui ont les performances les plus faibles
-        df["Process"] = df["Routes"] + df["Product type"]
-        pareto_df = df.groupby("Process").agg(defect_rate=("Defect rates", "mean"))
-        pareto_df = pareto_df.sort_values(by=["defect_rate"], ascending=True)
-
-        fig_pareto = go.Figure()
-
-        fig_pareto.add_trace(
-            go.Bar(
-                x=pareto_df.index,
-                y=pareto_df["defect_rate"],
-                name="Taux de défauts",
-            )
-        )
-
-        fig_pareto.add_trace(
-            go.Scatter(
-                x=pareto_df.index,
-                y=pareto_df["defect_rate"].cumsum(),
-                name="% cumulatif",
-            )
-        )
-
-        fig_pareto.update_layout(
-            title="Diagramme de Pareto",
-            xaxis_title="Processus",
-            yaxis_title="Taux de défauts",
-            yaxis2=dict(
-                title="% cumulatif",
-                overlaying='y',
-                side='right',
-                range=[0, 100]
-            ),
-        )
         return dbc.Row(
             [ 
-                html.Div(
-                    [
-                        html.H1("Tableau de bord de Performance", className="text-danger"),
-                        html.Hr(),
-                        html.P("Indicateurs de performances"),
-                    ],
-                    className="p-3 bg-light rounded-3",
-                ),
-                dcc.Graph(figure=fig_performance),
-                dcc.Graph(figure=fig_machine_utilization_rate),
-                dcc.Graph(figure=fig_production_cycle_time),
-                dcc.Graph(figure=fig_pareto),
-                html.Div(
-                    [
-                        html.H1("Résultats/Recommandations", className="text-danger"),
-                        html.Hr(),
-                        html.P("--"),
-                    ],
-                    className="p-3 bg-light rounded-3",
-                ),
+                dbc.Col(dcc.Graph(figure=fig_machine_utilization_rate), width=6),
+                dbc.Col(dcc.Graph(figure=fig_production_cycle_time), width=6),
             ]
             )
     elif pathname == "/optimisation":
@@ -256,19 +158,19 @@ def render_page_content(pathname):
         )
         return dbc.Row(
             [
-                dcc.Graph(figure=fig),
-                html.P(
+               dbc.Col(dcc.Graph(figure=fig), width=6),
+               dbc.Col( html.P(
                 "Ce graphique montre que les coûts de transport sont un pourcentage important des coûts totaux de la chaîne d'approvisionnement pour certains types de produits. Cela suggère que l'entreprise pourrait bénéficier de la négociation de tarifs de transport plus bas ou de l'optimisation des itinéraires de transport.",
                    className="lead",
-                ),
-                 dcc.Graph(figure=fig2),
-                 html.P(
+                ), width=6),
+                  dbc.Col(dcc.Graph(figure=fig2),width=6),
+                 dbc.Col( html.P(
                      "Le graphique à aires empilées montre que les produits de soins capillaires et les produits de soins de la peau ont des goulots d'étranglement dans la chaîne d'approvisionnement. Ces goulots d'étranglement se manifestent par des écarts entre les niveaux de stock et les quantités commandées.", className="lead"),
-                 dcc.Graph(figure=fig3),
-                 html.P("Pour réduire les coûts totaux de la chaîne d'approvisionnement, l'entreprise peut envisager de réduire le taux de défauts.", className="lead"),
-                 html.P("Pour réduire l'impact des produits avec un taux de défauts élevé, l'entreprise peut envisager de les vendre à un prix inférieur.", className="lead"),
-                 html.P("Les produits avec un volume de ventes élevé ont tendance à avoir des coûts totaux de la chaîne d'approvisionnement plus élevés.", className="lead"),
-                 html.P("Les produits avec un taux de défauts élevé ont tendance à avoir des coûts totaux de la chaîne d'approvisionnement plus élevés.", className="lead"),
+                 dcc.Graph(figure=fig3),width=6),
+                 dbc.Col( html.P("Pour réduire les coûts totaux de la chaîne d'approvisionnement, l'entreprise peut envisager de réduire le taux de défauts.", className="lead"),width=6),
+                 dbc.Col( html.P("Pour réduire l'impact des produits avec un taux de défauts élevé, l'entreprise peut envisager de les vendre à un prix inférieur.", className="lead"),width=6),
+                  dbc.Col( html.P("Les produits avec un volume de ventes élevé ont tendance à avoir des coûts totaux de la chaîne d'approvisionnement plus élevés.", className="lead"),width=6),
+                 dbc.Col( html.P("Les produits avec un taux de défauts élevé ont tendance à avoir des coûts totaux de la chaîne d'approvisionnement plus élevés.", className="lead"),width=6),
             ]
         )
 
@@ -321,15 +223,15 @@ def render_page_content(pathname):
 # """Ce graphique montre que les niveaux de stock optimaux sont plus élevés que les niveaux de stock réels. Cela signifie qu'il est nécessaire d'augmenter les niveaux de stock pour répondre à la demande prévue."""
         return dbc.Row(
             [
-                dcc.Graph(figure=fig),
-                html.P(
+                dbc.Col( dcc.Graph(figure=fig),width=6),
+                 dbc.Col(html.P(
                 "Ce graphique montre qu il existe une corrélation positive entre les ventes et les stocks. Cela signifie que les niveaux de stock augmentent généralement lorsque les ventes augmentent.Ce graphique montre que les niveaux de stock optimaux sont plus élevés que les niveaux de stock réels. Cela signifie qu'il est nécessaire d'augmenter les niveaux de stock pour répondre à la demande prévue..",                   
                 className="lead",
-                ),
-                dcc.Graph(figure=fig2),
-                html.P(
+                ),width=6),
+                dbc.Col( dcc.Graph(figure=fig2),width=6),
+                dbc.Col( html.P(
                     "La prévision de la demande indique que les ventes devraient augmenter de 10 pourcent au cours des 12 prochains mois. Les niveaux de stock optimaux devraient être augmentés de 25 % pour répondre à la demande croissante.",
-                className="lead",)
+                className="lead",),width=6)
             ]
         )
     elif pathname == "/fournisseurs":
@@ -371,14 +273,14 @@ def render_page_content(pathname):
         fig.update_layout(legend=dict(title="Indicateurs"))
         return dbc.Row(
             [
-                html.P("Le diagramme à bulles montre la performance des fournisseurs en fonction de quatre indicateurs : le délai de livraison, le volume de production, les coûts de fabrication et le taux de défauts. Les bulles sont de taille proportionnelle au délai de livraison et de couleur en fonction du volume de production.", className="lead"),
-                dcc.Graph(figure=fig),
-                html.P(
-                    "Sur la base de ce diagramme à bulles, on peut conclure que les fournisseurs A, B et C sont les plus performants. Le fournisseur D est un choix acceptable si vous êtes prêt à accepter un temps de production plus long. Le fournisseur E est à éviter.", className="lead"),
-                html.P("Le fournisseur A a le plus long délai de livraison, mais il a également le plus grand volume de production. Le fournisseur B a le délai de livraison le plus court, mais il a également le plus petit volume de production. Les fournisseurs C et D ont des performances similaires en termes de délai de livraison et de volume de production.",
+                dbc.Col( html.P("Le diagramme à bulles montre la performance des fournisseurs en fonction de quatre indicateurs : le délai de livraison, le volume de production, les coûts de fabrication et le taux de défauts. Les bulles sont de taille proportionnelle au délai de livraison et de couleur en fonction du volume de production.", className="lead"),width=6),
+                dbc.Col( dcc.Graph(figure=fig),width=6),
+                dbc.Col( html.P(
+                    "Sur la base de ce diagramme à bulles, on peut conclure que les fournisseurs A, B et C sont les plus performants. Le fournisseur D est un choix acceptable si vous êtes prêt à accepter un temps de production plus long. Le fournisseur E est à éviter.", className="lead"),width=6),
+                dbc.Col( html.P("Le fournisseur A a le plus long délai de livraison, mais il a également le plus grand volume de production. Le fournisseur B a le délai de livraison le plus court, mais il a également le plus petit volume de production. Les fournisseurs C et D ont des performances similaires en termes de délai de livraison et de volume de production.",
                 className="lead",
-                ),
-                dcc.Graph(figure=fig2),
+                ),width=6),
+                dbc.Col( dcc.Graph(figure=fig2),width=6),
               
             ]
              )
@@ -396,18 +298,18 @@ def render_page_content(pathname):
 
         return dbc.Row(
             [
-                dcc.Graph(figure=fig),      
-                html.P("Ce graphique montre que les coûts de transport sont un pourcentage important des coûts totaux de la chaîne d'approvisionnement pour certains types de produits. Cela suggère que l'entreprise pourrait bénéficier de la négociation de tarifs de transport plus bas ou de l'optimisation des itinéraires de transport.",className="lead"),
-                html.P("Le diagramme à bulles montre la performance des fournisseurs en fonction de quatre indicateurs : le délai de livraison, le volume de production, les coûts de fabrication et le taux de défauts. Les bulles sont de taille proportionnelle au prix de fabrication et de couleur en fonction du volume de production.",className="lead"),
-                html.P("Commentaires des résultats",className="lead"),
-                html.P("Les coûts totaux de la chaîne d'approvisionnement sont de 100 000 €.",className="lead"),
-                html.P("Les goulots d'étranglement de la chaîne d'approvisionnement se trouvent dans les stocks de produits C et D.",className="lead"),
-                html.P("Les niveaux de stock optimaux sont de 125 % des ventes",className="lead"),
-                html.P("Les itinéraires de transport optimaux sont ceux qui ont les coûts de transport les plus bas.",className="lead"),
-                html.P("Les volumes de production optimaux sont ceux qui correspondent aux ventes",className="lead"),
-                html.P("L'entreprise peut réduire ses coûts de chaîne d'approvisionnement en négociant des tarifs de transport plus bas et en améliorant la gestion de ses stocks.",className="lead"),
-                html.P("L'entreprise peut améliorer la qualité de ses produits en mettant en place des mesures correctives pour réduire les défauts.",className="lead"),
-                html.P(""),
+                dbc.Col(dcc.Graph(figure=fig),   width=6),   
+                dbc.Col(html.P("Ce graphique montre que les coûts de transport sont un pourcentage important des coûts totaux de la chaîne d'approvisionnement pour certains types de produits. Cela suggère que l'entreprise pourrait bénéficier de la négociation de tarifs de transport plus bas ou de l'optimisation des itinéraires de transport.",className="lead"),width=6),
+                dbc.Col(html.P("Le diagramme à bulles montre la performance des fournisseurs en fonction de quatre indicateurs : le délai de livraison, le volume de production, les coûts de fabrication et le taux de défauts. Les bulles sont de taille proportionnelle au prix de fabrication et de couleur en fonction du volume de production.",className="lead"),width=6),
+                dbc.Col(html.P("Commentaires des résultats",className="lead"),width=6),
+                dbc.Col(html.P("Les coûts totaux de la chaîne d'approvisionnement sont de 100 000 €.",className="lead"),width=6),
+                dbc.Col(html.P("Les goulots d'étranglement de la chaîne d'approvisionnement se trouvent dans les stocks de produits C et D.",className="lead"),width=6),
+                dbc.Col(html.P("Les niveaux de stock optimaux sont de 125 % des ventes",className="lead"),width=6),
+                dbc.Col(html.P("Les itinéraires de transport optimaux sont ceux qui ont les coûts de transport les plus bas.",className="lead"),width=6),
+                dbc.Col(html.P("Les volumes de production optimaux sont ceux qui correspondent aux ventes",className="lead"),width=6),
+                dbc.Col(html.P("L'entreprise peut réduire ses coûts de chaîne d'approvisionnement en négociant des tarifs de transport plus bas et en améliorant la gestion de ses stocks.",className="lead"),width=6),
+                dbc.Col(html.P("L'entreprise peut améliorer la qualité de ses produits en mettant en place des mesures correctives pour réduire les défauts.",className="lead"),width=6),
+                dbc.Col(html.P(""), width=6),
             ]
         )
     elif pathname == "/production":
@@ -435,7 +337,7 @@ def render_page_content(pathname):
 
         return dbc.Row(
                 [
-                dcc.Graph(figure=fig),
+                dbc.Col( dcc.Graph(figure=fig), width=6),
                 ]
             )
     elif pathname == "/qualite":
@@ -453,16 +355,16 @@ def render_page_content(pathname):
 
         return dbc.Row(
             [ 
-                dcc.Graph(figure=fig_machine_utilization_rate),
-                dcc.Graph(figure=fig_production_cycle_time),
+               dbc.Col( dcc.Graph(figure=fig_machine_utilization_rate), width=6),
+               dbc.Col( dcc.Graph(figure=fig_production_cycle_time), width=6),
             ]
             )
     # Si l'utilisateur essaie d'atteindre une page différente, renvoyer un message 404
     return html.Div(
         [
-            html.H1("404: Non trouvé", className="text-danger"),
-            html.Hr(),
-            html.P(f"Le chemin {pathname} n'a pas été reconnu..."),
+           dbc.Col( html.H1("404: Non trouvé", className="text-danger"), width=6),
+           dbc.Col( html.Hr(), width=6),
+           dbc.Col( html.P(f"Le chemin {pathname} n'a pas été reconnu..."), width=6),
         ],
         className="p-3 bg-light rounded-3",
     )
